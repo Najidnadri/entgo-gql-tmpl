@@ -1,0 +1,100 @@
+version: "3"
+
+tasks:
+  generate:
+    cmds:
+      - go generate .
+
+  tidy:
+    cmds:
+      - go mod tidy
+      - go get -u ./...
+  
+  test:
+    cmds:
+      - go test ./...
+  
+  # RUNNING COMMANDS
+  run:local:
+    cmds:
+      - go run ./cmd
+    env:
+      APP_ENV: local
+
+  run:dev:
+    cmds:
+      - go run ./cmd
+    env:
+      APP_ENV: development
+
+  run:staging:
+    cmds:
+      - go run ./cmd
+    env:
+      APP_ENV: staging
+
+  run:prod:
+    cmds:
+      - go run ./cmd
+    env:
+      APP_ENV: production
+
+  # MIGRATE COMMANDS. ONLY DO THIS WITH LOCAL
+  migrate:local:
+    cmds:
+      - atlas migrate apply --dir "file://ent/migrate/migrations" --url "postgres://postgres:123456@0.0.0.0:5432/shopolah_v3?search_path=public&sslmode=disable"
+    env:
+      APP_ENV: local
+
+  atlas:diff:
+    cmds: 
+      - atlas migrate diff migration_name --dir "file://ent/migrate/migrations" --to "ent://schema" --dev-url "docker://postgres/15/test?search_path=public"
+  
+  atlas:lint:
+    cmds:
+      - atlas migrate lint --latest 1 --dir "file://ent/migrate/migrations" --dev-url "docker://postgres/15/test?search_path=public"
+
+  # Rollback to specific version with excludes
+  migrate:rollback:
+    cmds: 
+      - atlas schema apply --url "postgres://postgres:123456@0.0.0.0:5432/shopolah_v2?search_path=public&sslmode=disable" --to "file://ent/migrate/migrations?version=20240102054810" --dev-url "docker://postgres/15/test?search_path=public" --exclude "20240105042650"
+
+  # set to specific version after rolling back
+  migrate:set:
+    cmds:
+      - atlas migrate set 20240102054810 --url "postgres://postgres:123456@0.0.0.0:5432/shopolah_v2?search_path=public&sslmode=disable" --dir "file://ent/migrate/migrations"
+
+  # after deleting the unused migration file. rehash.
+  atlas:hash:
+    cmds:
+     - atlas migrate hash --dir "file://ent/migrate/migrations"
+  
+  # DOCKER
+  docker:build:dev:
+    cmds:
+      - docker build -t shopolah_dev_v2 . --file Dockerfile.development
+
+  docker:run:dev:
+    cmds:
+     - docker run -p 8080:8080 -d shopolah_dev_v2
+
+
+  # MOCK
+  mock:dev:
+    cmds:
+      - go run ./cmd/mock
+    env:
+      APP_ENV: development
+
+  mock:staging:
+    cmds:
+      - go run ./cmd/mock
+    env:
+      APP_ENV: staging
+  
+  mock:local:
+    cmds:
+      - go run ./cmd/mock
+    env:
+      APP_ENV: local
+

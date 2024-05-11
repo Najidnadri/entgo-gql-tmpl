@@ -1,0 +1,7 @@
+type ModelDemo {
+    name: String!
+}
+
+type Mutation {
+    Checkout(cartID: String!): Boolean!
+}

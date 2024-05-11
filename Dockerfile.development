@@ -1,0 +1,32 @@
+# GOLANG MULTI STAGE BUILD - BUILD STAGE
+FROM golang:1.22.1-alpine3.19 AS build-env
+
+WORKDIR /app
+
+# Cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy only specific files/directories and build
+COPY . . 
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app ./cmd/main.go
+
+# Deploy stage
+FROM alpine:latest
+WORKDIR /
+
+# Use ca-certificates, they might be needed for https requests
+RUN apk --no-cache add ca-certificates
+
+# Create a group and user to run our app
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy the binary from the build stage
+COPY --from=build-env /app/app/main ./app
+COPY --from=build-env /app/assets ./assets
+
+# Switch to the created user
+USER appuser
+
+EXPOSE 8080
+CMD ["./app"]
